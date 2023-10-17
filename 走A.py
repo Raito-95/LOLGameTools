@@ -16,9 +16,9 @@ PUL = POINTER(c_ulong)
 
 
 def get_attack_speed():
-    zhilianUrl = "https://127.0.0.1:2999/liveclientdata/activeplayer"
+    url = "https://127.0.0.1:2999/liveclientdata/activeplayer"
     try:
-        with requests.get(zhilianUrl, verify=False) as r:
+        with requests.get(url, verify=False) as r:
             if r.ok:
                 lolJson = r.text
                 data = json.loads(lolJson)
@@ -28,33 +28,6 @@ def get_attack_speed():
     except requests.RequestException as e:
         print(f"An error occurred: {e}")
         return None
-
-
-# def get_mpos():
-#     orig = POINT()
-#     windll.user32.GetCursorPos(byref(orig))
-#     return int(orig.x), int(orig.y)
-
-
-# def set_mpos(pos):
-#     x, y = pos
-#     windll.user32.SetCursorPos(x, y)
-
-
-# def move_click(pos, move_back=False):
-#     origx, origy = get_mpos()
-#     set_mpos(pos)
-#     FInputs = Input * 2
-#     extra = c_ulong(0)
-#     ii_ = Input_I()
-#     ii_.mi = MouseInput(0, 0, 0, 2, 0, pointer(extra))
-#     ii2_ = Input_I()
-#     ii2_.mi = MouseInput(0, 0, 0, 4, 0, pointer(extra))
-#     x = FInputs((0, ii_), (0, ii2_))
-#     windll.user32.SendInput(2, pointer(x), sizeof(x[0]))
-#     if move_back:
-#         set_mpos((origx, origy))
-#         return origx, origy
 
 
 def sendkey(scancode, pressed):
@@ -114,59 +87,26 @@ class POINT(Structure):
                 ("y", c_ulong)]
 
 
-class TaskBarIcon(wx.adv.TaskBarIcon):
-    ID_About = wx.NewIdRef()
-    ID_Close = wx.NewIdRef()
-
-    def __init__(self, frame):
-        wx.adv.TaskBarIcon.__init__(self)
-        self.frame = frame
-        self.Bind(wx.adv.EVT_TASKBAR_LEFT_DOWN, self.on_task_bar_left_click)
-        self.Bind(wx.EVT_MENU, self.on_about, id=self.ID_About)
-        self.Bind(wx.EVT_MENU, self.on_close, id=self.ID_Close)
-
-    def on_task_bar_left_click(self, event):
-        if self.frame.IsIconized():
-            self.frame.Iconize(False)
-        if not self.frame.IsShown():
-            self.frame.Show(True)
-        self.frame.Raise()
-
-    def on_about(self, event):
-        wx.MessageBox("Test")
-
-    def on_close(self, event):
-        self.Destroy()
-        self.frame.Destroy()
-
-    def create_popup_menu(self):
-        menu = wx.Menu()
-        menu.Append(self.ID_About, '使用幫助')
-        menu.Append(self.ID_Close, '退出')
-        return menu
-
-
 class MainWindow(wx.Frame):
     minTime = 0.1
     onlyLoL = True
     currentKey = "Capital"
-    GongSu = 0.7
-    QianYao = 0.35
-    YDBC = 0.0
-    dc = 1.0 / GongSu
-    qy = dc * QianYao
-    hy = dc - qy + YDBC
+    attackSpeed = 0.7
+    windupPercent = 0.35
+    windupModifier = 0.0
+    attackTime = 1.0 / attackSpeed
+    windupTime = attackTime * windupPercent
+    timeBetweenAttacks = attackTime - windupTime + windupModifier
 
-    press_the_trigger_button = False
+    pressTheTriggerButton = False
     
     def __init__(self, parent, title):
         wx.Frame.__init__(self, parent, title=title, pos=wx.DefaultPosition, style=wx.DEFAULT_FRAME_STYLE ^ (
                 wx.MAXIMIZE_BOX | wx.SYSTEM_MENU) | wx.STAY_ON_TOP, size=(210, 180))
 
         self.SetBackgroundColour("#ffffff")
-        self.taskBarIcon = TaskBarIcon(self)
         self.Bind(wx.EVT_CLOSE, self.on_close)
-        self.isPause = False
+        self.is_pause = False
         self.start_setting = False
 
         self.sizer = wx.BoxSizer(wx.VERTICAL)
@@ -176,7 +116,7 @@ class MainWindow(wx.Frame):
         self.sizer5 = wx.BoxSizer(wx.HORIZONTAL)
 
         self.text2 = wx.StaticText(self, name="aa", label="前摇", size=(40, -1), style=wx.ALIGN_CENTER)
-        self.text_num2 = wx.StaticText(self, name="aa", label=str(self.QianYao), size=(60, -1), style=wx.ALIGN_CENTER)
+        self.text_num2 = wx.StaticText(self, name="aa", label=str(self.windupPercent), size=(60, -1), style=wx.ALIGN_CENTER)
         self.text2.SetFont(wx.Font(12, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
         self.text_num2.SetFont(wx.Font(20, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         self.text2.SetForegroundColour('#000000')
@@ -191,11 +131,11 @@ class MainWindow(wx.Frame):
         self.sizer2.Add(self.button_up2, flag=wx.ALIGN_CENTER)
 
         self.text3 = wx.StaticText(self, name="aa", label="移補", size=(40, -1), style=wx.ALIGN_CENTER)
-        self.text_num3 = wx.StaticText(self, name="aa", label=str(self.YDBC), size=(60, -1), style=wx.ALIGN_CENTER)
+        self.text_num3 = wx.StaticText(self, name="aa", label=str(self.windupModifier), size=(60, -1), style=wx.ALIGN_CENTER)
         self.text3.SetFont(wx.Font(12, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
         self.text_num3.SetFont(wx.Font(20, wx.FONTFAMILY_SWISS, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_BOLD))
         self.text3.SetForegroundColour('#000000')
-        self.text_num3.SetForegroundColour('#000000')
+        self.text_num3.SetForegroundColour('#FF0000')
         self.button_up3 = wx.Button(self, name="up3", label="+", size=(30, 30))
         self.button_down3 = wx.Button(self, name="down3", label="-", size=(30, 30))
         self.Bind(wx.EVT_BUTTON, self.on_click, self.button_up3)
@@ -229,36 +169,36 @@ class MainWindow(wx.Frame):
 
         self.thread_key = threading.Thread(target=self.action)
         self.thread_action = threading.Thread(target=self.key_listener)
-        self.thread_listenerAttackSpeed = threading.Thread(target=self.listener_attack_speed)
-        self.thread_listenerAttackSpeed.daemon = True
-        self.thread_key.daemon = True
+        self.thread_listener_attack_speed = threading.Thread(target=self.listener_attack_speed)
+        self.thread_listener_attack_speed.daemon = True
         self.thread_action.daemon = True
-        self.thread_listenerAttackSpeed.start()
-        self.thread_key.start()
+        self.thread_key.daemon = True
+        self.thread_listener_attack_speed.start()
         self.thread_action.start()
+        self.thread_key.start()
 
     def on_key_down(self, event):
         if event.Key == self.currentKey:
-            self.press_the_trigger_button = True
-            if self.onlyLoL and not self.isPause:
+            self.pressTheTriggerButton = True
+            if self.onlyLoL and not self.is_pause:
                 sendkey(0x2e, 1)
-            return self.isPause
+            return self.is_pause
         elif event.Key == "Right":
             self.update_number(self.text_num2, True, 0, 1, 0.01)
             self.Iconize(False)
-            return self.isPause
+            return self.is_pause
         elif event.Key == "Left":
             self.update_number(self.text_num2, False, 0, 1, 0.01)
             self.Iconize(False)
-            return self.isPause
+            return self.is_pause
         elif event.Key == "Prior":
-            self.isPause = False
+            self.is_pause = False
             self.SetTransparent(255)
-            self.message_text.Label = "已啟動,按住[" + self.currentKey + "]走A"
+            self.message_text.Label = "已啟動，按住[" + self.currentKey + "]走A"
             self.Iconize(False)
             return False
         elif event.Key == "Next":
-            self.isPause = True
+            self.is_pause = True
             self.SetTransparent(90)
             self.message_text.Label = "已關閉"
             self.Iconize(False)
@@ -282,28 +222,30 @@ class MainWindow(wx.Frame):
 
     def on_key_up(self, event):
         if event.Key == self.currentKey:
-            self.press_the_trigger_button = False
+            self.pressTheTriggerButton = False
             if self.onlyLoL:
                 sendkey(0x2e, 0)
-            return self.isPause
+                sendkey(0x2e, 1)
+                sendkey(0x2e, 0)
+            return self.is_pause
         return True
 
     def action(self):
         while True:
-            if self.press_the_trigger_button and not self.isPause:
-                self.click(0x2c, self.qy)
-                self.click(0x2d, self.hy)
+            if self.pressTheTriggerButton and not self.is_pause:
+                self.click(0x2c, self.windupTime)
+                self.click(0x2d, self.timeBetweenAttacks)
             else:
                 time.sleep(0.01)
 
     def click(self, key, click_time):
-        while click_time > self.minTime and self.press_the_trigger_button:
+        while click_time > self.minTime and self.pressTheTriggerButton:
             process_time = time.time()
             sendkey(key, 1)
             sendkey(key, 0)
             time.sleep(self.minTime)
             click_time = click_time - (time.time() - process_time)
-        if self.press_the_trigger_button and click_time >= 0:
+        if self.pressTheTriggerButton and click_time >= 0:
             sendkey(key, 1)
             sendkey(key, 0)
             time.sleep(click_time)
@@ -325,15 +267,15 @@ class MainWindow(wx.Frame):
                 continue
             if speed <= 0:
                 continue
-            if self.GongSu == speed:
+            if self.attackSpeed == speed:
                 continue
-            self.GongSu = speed
-            self.dc = 1.0 / self.GongSu
-            self.qy = self.dc * self.QianYao
-            self.hy = self.dc - self.qy + self.YDBC
+            self.attackSpeed = speed
+            self.attackTime = 1.0 / self.attackSpeed
+            self.windupTime = self.attackTime * self.windupPercent
+            self.timeBetweenAttacks = self.attackTime - self.windupTime + self.windupModifier
 
     def on_close(self, event):
-        self.Iconize(True)
+        self.Destroy()
 
     def on_click(self, event):
         name = event.GetEventObject().GetName()
@@ -350,11 +292,11 @@ class MainWindow(wx.Frame):
             function(*args)
         else:
             if name == "start":
-                self.isPause = False
+                self.is_pause = False
                 self.SetTransparent(255)
-                self.message_text.Label = "已啟動,按住[" + self.currentKey + "]走A"
+                self.message_text.Label = "已啟動，按住[" + self.currentKey + "]走A"
             elif name == "stop":
-                self.isPause = True
+                self.is_pause = True
                 self.SetTransparent(90)
                 self.message_text.Label = "已關閉"
             elif name == "setting":
@@ -373,12 +315,12 @@ class MainWindow(wx.Frame):
         if num > max:
             num = max
         if who == self.text_num2:
-            self.QianYao = num
+            self.windupPercent = num
         elif who == self.text_num3:
-            self.YDBC = num
-        self.dc = 1.0 / self.GongSu
-        self.qy = self.dc * self.QianYao
-        self.hy = self.dc - self.qy + self.YDBC
+            self.windupModifier = num
+        self.attackTime = 1.0 / self.attackSpeed
+        self.windupTime = self.attackTime * self.windupPercent
+        self.timeBetweenAttacks = self.attackTime - self.windupTime + self.windupModifier
         num = str(num)
         if len(num) > 3:
             num = num[0:4]
