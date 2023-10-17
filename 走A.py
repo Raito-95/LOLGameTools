@@ -250,7 +250,7 @@ class MainWindow(wx.Frame):
             sendkey(key, 0)
             time.sleep(click_time)
 
-    def key_listener(self, event):
+    def key_listener(self, ):
         hm = pyWinhook.HookManager()
         hm.KeyDown = self.on_key_down
         hm.KeyUp = self.on_key_up
@@ -258,7 +258,7 @@ class MainWindow(wx.Frame):
         hm.HookMouse()
         pythoncom.PumpMessages()
 
-    def listener_attack_speed(self, event):
+    def listener_attack_speed(self, ):
         while True:
             time.sleep(0.2)
             speed = get_attack_speed()
